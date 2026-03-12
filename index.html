@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Clap Ball Game by Nishu</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box}
+body{
+  margin:0;
+  font-family:'Poppins',sans-serif;
+  color:white;
+  background:linear-gradient(270deg,#ff0080,#7928ca,#2af598,#00c6ff,#ff9a00);
+  background-size:800% 800%;
+  animation:bgmove 15s ease infinite;
+}
+@keyframes bgmove{
+  0%{background-position:0% 50%}
+  50%{background-position:100% 50%}
+  100%{background-position:0% 50%}
+}
+.hero{
+  text-align:center;
+  padding:60px 20px 30px;
+}
+.hero h1{
+  font-size:48px;
+  margin:0;
+  font-weight:800;
+  text-shadow:0 4px 18px rgba(0,0,0,.25);
+}
+.hero p{opacity:.95}
+.btn{
+  margin-top:15px;
+  display:inline-block;
+  padding:12px 24px;
+  background:#22c55e;
+  border-radius:12px;
+  color:white;
+  text-decoration:none;
+  font-weight:600;
+  box-shadow:0 10px 25px rgba(0,0,0,.18);
+}
+main{max-width:950px;margin:auto;padding:20px 20px 50px}
+#gameContainer{
+  height:460px;
+  background:rgba(0,0,0,.3);
+  border-radius:20px;
+  position:relative;
+  overflow:hidden;
+  backdrop-filter:blur(8px);
+  box-shadow:0 20px 50px rgba(0,0,0,.25);
+}
+.bg-orb{
+  position:absolute;
+  border-radius:50%;
+  filter:blur(10px);
+  opacity:.22;
+  pointer-events:none;
+  animation:floaty 8s ease-in-out infinite;
+}
+.bg1{width:180px;height:180px;background:#fff;top:20px;left:20px}
+.bg2{width:220px;height:220px;background:#00f7ff;bottom:10px;right:10px;animation-delay:1.5s}
+.bg3{width:140px;height:140px;background:#ffd700;top:120px;right:120px;animation-delay:3s}
+@keyframes floaty{
+  0%,100%{transform:translateY(0) translateX(0)}
+  50%{transform:translateY(-18px) translateX(12px)}
+}
+.ball{
+  position:absolute;
+  border-radius:50%;
+  background:radial-gradient(circle at 30% 30%,#fff3b0,#ff9500,#ff3d00);
+  box-shadow:0 0 25px rgba(255,110,0,.9);
+  transition:left .28s ease,top .28s ease,transform .15s ease,opacity .25s ease;
+}
+.ball.blast{
+  animation:explode .45s ease forwards;
+}
+@keyframes explode{
+  0%{transform:scale(1);opacity:1;filter:brightness(1)}
+  50%{transform:scale(1.35);opacity:1;filter:brightness(2.3)}
+  100%{transform:scale(2.2);opacity:0;filter:brightness(3.5)}
+}
+.hud{
+  position:absolute;
+  top:14px;
+  left:14px;
+  right:14px;
+  display:flex;
+  justify-content:space-between;
+  gap:8px;
+  flex-wrap:wrap;
+  z-index:2;
+}
+.card{
+  background:rgba(255,255,255,.14);
+  padding:8px 12px;
+  border-radius:12px;
+  font-size:14px;
+  backdrop-filter:blur(8px);
+}
+.barwrap{
+  position:absolute;
+  bottom:16px;
+  left:50%;
+  transform:translateX(-50%);
+  width:82%;
+  height:18px;
+  background:rgba(255,255,255,.18);
+  border-radius:20px;
+  overflow:hidden;
+  z-index:2;
+}
+.bar{
+  height:100%;
+  width:0%;
+  background:linear-gradient(90deg,#22c55e,#eab308,#ef4444);
+  transition:width .06s linear;
+}
+.message{
+  position:absolute;
+  top:50%;
+  left:50%;
+  transform:translate(-50%,-50%);
+  font-size:24px;
+  font-weight:700;
+  text-align:center;
+  z-index:2;
+  text-shadow:0 4px 12px rgba(0,0,0,.35);
+  padding:0 10px;
+}
+.small{
+  display:block;
+  font-size:14px;
+  font-weight:500;
+  margin-top:8px;
+  opacity:.95;
+}
+@media (max-width:700px){
+  .hero h1{font-size:34px}
+  #gameContainer{height:500px}
+  .message{font-size:20px}
+}
+</style>
+</head>
+<body>
+<header class="hero">
+  <h1>Clap Ball Game</h1>
+  <p>Clap louder to destroy the ball and reach level 20.</p>
+  <a href="#game" class="btn">Play Now</a>
+</header>
+<main>
+  <section id="game">
+    <h2>Play the Game</h2>
+    <div id="gameContainer">
+      <div class="bg-orb bg1"></div>
+      <div class="bg-orb bg2"></div>
+      <div class="bg-orb bg3"></div>
+      <div class="hud">
+        <div class="card" id="levelCard">Level 1</div>
+        <div class="card" id="livesCard">Lives ❤❤❤</div>
+        <div class="card" id="scoreCard">Score 0</div>
+        <div class="card" id="comboCard">Combo x0</div>
+        <div class="card" id="needCard">Need 5%</div>
+        <div class="card" id="soundCard">Sound 0%</div>
+      </div>
+      <div class="message" id="message">Clap to Start<span class="small">3 perfect blasts in a row = bonus score</span></div>
+      <div class="barwrap"><div class="bar" id="soundBar"></div></div>
+    </div>
+  </section>
+</main>
+<script>
+const container=document.getElementById('gameContainer')
+const bar=document.getElementById('soundBar')
+const message=document.getElementById('message')
+const levelCard=document.getElementById('levelCard')
+const livesCard=document.getElementById('livesCard')
+const scoreCard=document.getElementById('scoreCard')
+const comboCard=document.getElementById('comboCard')
+const needCard=document.getElementById('needCard')
+const soundCard=document.getElementById('soundCard')
+
+let level=1
+let lives=3
+let score=0
+let combo=0
+let bossHits=0
+let ball=null
+let audioContext
+let analyser
+let dataArray
+let lastSoundTime=0
+let moveInterval=null
+let animationFrame=null
+let gameOver=false
+
+const TOTAL_LEVELS=20
+const WRONG_THRESHOLD=40
+const MIN_GAP=650
+
+function requiredSound(){
+  return Math.min(level*5,100)
+}
+
+function updateHUD(currentSound=0){
+  levelCard.innerText='Level '+level
+  livesCard.innerText='Lives '+('❤'.repeat(Math.max(lives,0)) || '0')
+  scoreCard.innerText='Score '+score
+  comboCard.innerText='Combo x'+combo
+  needCard.innerText='Need '+requiredSound()+'%'
+  soundCard.innerText='Sound '+currentSound+'%'
+}
+
+function createBall(){
+  if(ball) ball.remove()
+  ball=document.createElement('div')
+  ball.className='ball'
+  const size=level===20?170:60+level*8
+  ball.style.width=size+'px'
+  ball.style.height=size+'px'
+  container.appendChild(ball)
+  moveBall(size)
+  startMovement(size)
+}
+
+function moveBall(size){
+  const maxX=container.clientWidth-size-8
+  const maxY=container.clientHeight-size-40
+  ball.style.left=Math.max(6,Math.random()*maxX)+'px'
+  ball.style.top=Math.max(55,Math.random()*maxY)+'px'
+}
+
+function startMovement(size){
+  clearInterval(moveInterval)
+  const speed=level===20?320:Math.max(380,1050-level*25)
+  moveInterval=setInterval(()=>{
+    if(gameOver || !ball) return
+    moveBall(size)
+  },speed)
+}
+
+function playBlastSound(){
+  if(!audioContext) return
+  const osc=audioContext.createOscillator()
+  const gain=audioContext.createGain()
+  const now=audioContext.currentTime
+  osc.type='sawtooth'
+  osc.frequency.setValueAtTime(260,now)
+  osc.frequency.exponentialRampToValueAtTime(70,now+.18)
+  gain.gain.setValueAtTime(.001,now)
+  gain.gain.exponentialRampToValueAtTime(.18,now+.02)
+  gain.gain.exponentialRampToValueAtTime(.001,now+.22)
+  osc.connect(gain)
+  gain.connect(audioContext.destination)
+  osc.start(now)
+  osc.stop(now+.22)
+}
+
+function playWinSound(){
+  if(!audioContext) return
+  const notes=[523.25,659.25,783.99,1046.5]
+  notes.forEach((freq,i)=>{
+    const osc=audioContext.createOscillator()
+    const gain=audioContext.createGain()
+    const start=audioContext.currentTime+i*.1
+    osc.type='triangle'
+    osc.frequency.value=freq
+    gain.gain.setValueAtTime(.001,start)
+    gain.gain.exponentialRampToValueAtTime(.12,start+.03)
+    gain.gain.exponentialRampToValueAtTime(.001,start+.16)
+    osc.connect(gain)
+    gain.connect(audioContext.destination)
+    osc.start(start)
+    osc.stop(start+.16)
+  })
+}
+
+function blast(){
+  if(!ball || gameOver) return
+  playBlastSound()
+  ball.classList.add('blast')
+  combo++
+  let gained=10
+  if(combo>=3) gained+=10
+  if(level===20) gained+=15
+  score+=gained
+  updateHUD()
+
+  if(level===20){
+    bossHits++
+    message.innerHTML='Boss hit '+bossHits+'/3<span class="small">Need '+requiredSound()+'% to hit again</span>'
+  } else {
+    message.innerHTML='Boom Level '+level+' clear<span class="small">Perfect clap</span>'
+  }
+
+  setTimeout(()=>{
+    if(gameOver) return
+    if(level===20){
+      if(bossHits>=3){
+        gameOver=true
+        clearInterval(moveInterval)
+        if(ball) ball.remove()
+        playWinSound()
+        message.innerHTML='You Win 🔥<span class="small">Final Score '+score+'</span>'
+        return
+      }
+      ball.classList.remove('blast')
+      ball.style.opacity='1'
+      createBall()
+      return
+    }
+    level++
+    if(level>TOTAL_LEVELS){
+      gameOver=true
+      clearInterval(moveInterval)
+      if(ball) ball.remove()
+      playWinSound()
+      message.innerHTML='You Win 🔥<span class="small">Final Score '+score+'</span>'
+      return
+    }
+    createBall()
+    updateHUD()
+    message.innerHTML='Level '+level+'<span class="small">Need '+requiredSound()+'% sound</span>'
+  },420)
+}
+
+function loseLife(percent){
+  lives--
+  combo=0
+  updateHUD(percent)
+  message.innerHTML='Need '+requiredSound()+'%  You made '+percent+'%<span class="small">Heart minus</span>'
+  if(lives<=0){
+    gameOver=true
+    clearInterval(moveInterval)
+    if(ball) ball.remove()
+    message.innerHTML='Game Over<span class="small">Final Score '+score+'</span>'
+  }
+}
+
+async function setupMic(){
+  if(audioContext) return
+  const stream=await navigator.mediaDevices.getUserMedia({audio:true})
+  audioContext=new (window.AudioContext||window.webkitAudioContext)()
+  analyser=audioContext.createAnalyser()
+  analyser.fftSize=256
+  const mic=audioContext.createMediaStreamSource(stream)
+  mic.connect(analyser)
+  dataArray=new Uint8Array(analyser.frequencyBinCount)
+}
+
+function listen(){
+  analyser.getByteFrequencyData(dataArray)
+  let sum=0
+  for(let i=0;i<dataArray.length;i++) sum+=dataArray[i]
+  const avg=sum/dataArray.length
+  const percent=Math.min(100,Math.round((avg/120)*100))
+  bar.style.width=percent+'%'
+  updateHUD(percent)
+
+  const now=Date.now()
+  if(!gameOver){
+    if(percent>=requiredSound() && now-lastSoundTime>MIN_GAP){
+      lastSoundTime=now
+      blast()
+    } else if(percent>=WRONG_THRESHOLD && percent<requiredSound() && now-lastSoundTime>MIN_GAP){
+      lastSoundTime=now
+      loseLife(percent)
+    }
+  }
+  animationFrame=requestAnimationFrame(listen)
+}
+
+async function start(){
+  await setupMic()
+  level=1
+  lives=3
+  score=0
+  combo=0
+  bossHits=0
+  gameOver=false
+  clearInterval(moveInterval)
+  if(animationFrame) cancelAnimationFrame(animationFrame)
+  createBall()
+  updateHUD()
+  message.innerHTML='Clap to Start<span class="small">Level 1 needs 5% sound</span>'
+  listen()
+}
+
+start()
+</script>
+</body>
+</html>
