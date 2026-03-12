@@ -1,14 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
- <title>Clap Ball Game – Play Online Clap Sound Game</title>
-<meta property="og:title" content="Clap Ball Game Endless">
-<meta property="og:description" content="Clap to blast the ball. Endless sound challenge game.">
-<meta property="og:image" content="https://nishu1122ab-alt.github.io/clap-ball-game/cover.png">
-<meta property="og:site_name" content="Clap Ball Game">
-<meta name="description" content="Clap Ball Game is a fun browser game where you clap to blast the ball. Endless difficulty mode with leaderboard.">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Clap Ball Game Endless by Nishu</title>
 <link rel="icon" href="favicon.ico">
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;800&display=swap" rel="stylesheet">
 <style>
@@ -129,7 +124,28 @@ main{max-width:980px;margin:auto;padding:20px 20px 50px}
     <ol id="leaderboardList"></ol>
   </section>
 </main>
-<script>
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
+import { getFirestore, collection, addDoc, getDocs, query, orderBy, limit, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+
+const firebaseConfig = {
+  apiKey: 'PASTE_YOUR_API_KEY',
+  authDomain: 'PASTE_YOUR_AUTH_DOMAIN',
+  projectId: 'PASTE_YOUR_PROJECT_ID',
+  storageBucket: 'PASTE_YOUR_STORAGE_BUCKET',
+  messagingSenderId: 'PASTE_YOUR_MESSAGING_SENDER_ID',
+  appId: 'PASTE_YOUR_APP_ID'
+};
+
+let db = null;
+try {
+  const app = initializeApp(firebaseConfig);
+  db = getFirestore(app);
+} catch (e) {
+  console.log('Firebase not configured yet', e);
+}
+
+
 const container=document.getElementById('gameContainer')
 const bar=document.getElementById('soundBar')
 const message=document.getElementById('message')
@@ -175,8 +191,8 @@ let playerName='Guest'
 
 const WRONG_THRESHOLD=35
 const MIN_GAP=650
-const LEADERBOARD_KEY='clapBallLeaderboardV3'
 const PLAYER_KEY='clapBallPlayerName'
+const LEADERBOARD_COLLECTION='leaderboard'
 
 function getNeed(){ return Math.min(8 + (round-1)*3, 92) }
 function getSpeedLevel(){ return 1 + Math.floor((round-1)/3) }
@@ -195,28 +211,55 @@ function updateHUD(currentSound=0){
   playerCard.innerText='Player '+playerName
 }
 
-function renderLeaderboard(){
-  const scores=JSON.parse(localStorage.getItem(LEADERBOARD_KEY) || '[]')
+async function renderLeaderboard(){
   leaderboardList.innerHTML=''
-  if(!scores.length){
+  if(!db){
     const li=document.createElement('li')
-    li.innerText='No scores yet'
+    li.innerText='Firebase not connected yet'
     leaderboardList.appendChild(li)
     return
   }
-  scores.slice(0,7).forEach((item,index)=>{
+
+  try {
+    const q=query(collection(db, LEADERBOARD_COLLECTION), orderBy('score','desc'), orderBy('round','desc'), limit(7))
+    const snap=await getDocs(q)
+
+    if(snap.empty){
+      const li=document.createElement('li')
+      li.innerText='No scores yet'
+      leaderboardList.appendChild(li)
+      return
+    }
+
+    let rank=1
+    snap.forEach(docSnap=>{
+      const item=docSnap.data()
+      const li=document.createElement('li')
+      li.innerText=`#${rank}  ${item.name || 'Guest'}  ${item.score || 0} pts  Round ${item.round || 1}`
+      leaderboardList.appendChild(li)
+      rank++
+    })
+  } catch(err){
     const li=document.createElement('li')
-    li.innerText=`#${index+1}  ${item.name}  ${item.score} pts  Round ${item.round}`
+    li.innerText='Leaderboard load failed'
     leaderboardList.appendChild(li)
-  })
+    console.log(err)
+  }
 }
 
-function saveScore(){
-  const scores=JSON.parse(localStorage.getItem(LEADERBOARD_KEY) || '[]')
-  scores.push({name:playerName,score,round})
-  scores.sort((a,b)=>b.score-a.score || b.round-a.round)
-  localStorage.setItem(LEADERBOARD_KEY, JSON.stringify(scores.slice(0,7)))
-  renderLeaderboard()
+async function await saveScore(){
+  if(!db) return
+  try {
+    await addDoc(collection(db, LEADERBOARD_COLLECTION), {
+      name: playerName,
+      score: score,
+      round: round,
+      createdAt: serverTimestamp()
+    })
+    await renderLeaderboard()
+  } catch(err){
+    console.log('Score save failed', err)
+  }
 }
 
 function createBall(type='real'){
@@ -298,7 +341,7 @@ function showGameOver(title,text){
   gameOverPanel.classList.add('shake')
 }
 
-function finishGame(reason){
+async function finishGame(reason){
   gameOver=true
   clearInterval(realMoveInterval)
   clearInterval(fakeMoveInterval)
@@ -444,5 +487,4 @@ bootLoading()
 </script>
 </body>
 </html>
-
 
